@@ -34,8 +34,27 @@ struct ContentView: View {
         .mint,
         .teal,
     ]
-
+    
     var body: some View {
+        NavigationView {
+            ScrollView(showsIndicators: false) {
+                VStack {
+                    CongruentScrollingHStack(0 ..< 20) { i in
+                        ZStack {
+                            Color.secondary
+                            
+                            Text("\(i)")
+                        }
+                        .cornerRadius(5)
+                        .aspectRatio(1, contentMode: .fill)
+                        .frame(width: 75)
+                    }
+                }
+            }
+        }
+    }
+
+    var abody: some View {
         NavigationView {
             ScrollView(showsIndicators: false) {
                 VStack {

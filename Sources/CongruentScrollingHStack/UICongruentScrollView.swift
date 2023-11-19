@@ -23,10 +23,16 @@ import SwiftUI
 // TODO: alwaysBounceHorizontal setting
 // TODO: should prefetch use row instead of hashvalue?
 
-class UICongruentScrollView<Item: Hashable>: UIView, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout,
-UICollectionViewDataSourcePrefetching {
+class UICongruentScrollView<Item: Hashable>: UIView, 
+                                                UICollectionViewDataSource,
+                                                UICollectionViewDelegate,
+                                                UICollectionViewDelegateFlowLayout,
+                                             UICollectionViewDataSourcePrefetching {
 
     private let logger = Logger()
+    
+    private var wrapAround = true
+    private var effectiveItemCount = 100
 
     private var dataSource: UICollectionViewDiffableDataSource<Int, Int>!
     private let didReachTrailingSide: () -> Void
@@ -48,7 +54,6 @@ UICollectionViewDataSourcePrefetching {
             collectionView.collectionViewLayout.invalidateLayout()
         }
     }
-
     private let viewProvider: (Item) -> any View
 
     // MARK: init
@@ -179,43 +184,66 @@ UICollectionViewDataSourcePrefetching {
 
     private func configureDataSource() {
 
-        let cellRegistration = UICollectionView.CellRegistration<HostingCollectionViewCell, Item> { cell, _, item in
-            if let premade = self.prefetchedViewCache[item.hashValue] {
-                cell.setupHostingView(premade: premade)
-                self.prefetchedViewCache.removeValue(forKey: item.hashValue)
-            } else {
-                cell.setupHostingView(with: self.viewProvider(item))
-            }
-        }
+//        let cellRegistration = UICollectionView.CellRegistration<HostingCollectionViewCell, Item> { cell, _, item in
+//            if let premade = self.prefetchedViewCache[item.hashValue] {
+//                cell.setupHostingView(premade: premade)
+//                self.prefetchedViewCache.removeValue(forKey: item.hashValue)
+//            } else {
+//                cell.setupHostingView(with: self.viewProvider(item))
+//            }
+//        }
+//
+//        dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView) { collectionView, indexPath, _ in
+//            
+//            let i: Int
+//            
+//            if self.wrapAround {
+//                i = indexPath.row % self.items.wrappedValue.count
+//            } else {
+//                i = indexPath.row
+//            }
+//            
+//            let item = self.items.wrappedValue[indexPath.row]
+//            return collectionView.dequeueConfiguredReusableCell(using: cellRegistration, for: indexPath, item: item)
+//        }
 
-        dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView) { collectionView, indexPath, _ in
-            let item = self.items.wrappedValue[indexPath.row]
-            return collectionView.dequeueConfiguredReusableCell(using: cellRegistration, for: indexPath, item: item)
-        }
-
+        collectionView.register(HostingCollectionViewCell.self, forCellWithReuseIdentifier: HostingCollectionViewCell.reuseIdentifier)
+        
+        collectionView.dataSource = self
         collectionView.prefetchDataSource = self
     }
 
     func updateItems(with newItems: Binding<OrderedSet<Item>>) {
 
         items = newItems
+        collectionView.reloadData()
 
-        var snapshot = NSDiffableDataSourceSnapshot<Int, Int>()
-        snapshot.appendSections([0])
-        snapshot.appendItems(newItems.wrappedValue.map(\.hashValue))
-        dataSource.apply(snapshot, animatingDifferences: true, completion: nil)
+//        var snapshot = NSDiffableDataSourceSnapshot<Int, Int>()
+//        snapshot.appendSections([0])
+//        snapshot.appendItems(newItems.wrappedValue.map(\.hashValue))
+//        dataSource.apply(snapshot, animatingDifferences: true, completion: nil)
     }
 
     // MARK: UIScrollViewDelegate
 
     // TODO: state handling
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        
+        if wrapAround {
+            let reachPosition = scrollView.contentSize.width - scrollView.bounds.width * 2
+            let reachedTrailing = scrollView.contentOffset.x >= reachPosition
+            
+            if reachedTrailing {
+                effectiveItemCount += 100
+                collectionView.reloadData()
+            }
+        } else {
+            let reachPosition = scrollView.contentSize.width - scrollView.bounds.width - didReachTrailingSideOffset
+            let reachedTrailing = scrollView.contentOffset.x >= reachPosition
 
-        let reachPosition = scrollView.contentSize.width - scrollView.bounds.width - didReachTrailingSideOffset
-        let reachedTrailing = scrollView.contentOffset.x >= reachPosition
-
-        if reachedTrailing {
-            didReachTrailingSide()
+            if reachedTrailing {
+                didReachTrailingSide()
+            }
         }
     }
 
@@ -225,9 +253,37 @@ UICollectionViewDataSourcePrefetching {
 
         let visibleItems = collectionView
             .indexPathsForVisibleItems
-            .map { items.wrappedValue[$0.row] }
+            .map { items.wrappedValue[$0.row % items.wrappedValue.count] }
 
         didScrollToItems(visibleItems)
+    }
+    
+    // MARK: UICollectionViewDataSource
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        
+        print("number of items: \(effectiveItemCount)")
+        
+        if wrapAround {
+            return effectiveItemCount
+        } else {
+            return items.wrappedValue.count
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: HostingCollectionViewCell.reuseIdentifier, for: indexPath) as! HostingCollectionViewCell
+        let item = self.items.wrappedValue[indexPath.row % items.wrappedValue.count]
+        
+        if let premade = self.prefetchedViewCache[item.hashValue] {
+            cell.setupHostingView(premade: premade)
+            self.prefetchedViewCache.removeValue(forKey: item.hashValue)
+        } else {
+            cell.setupHostingView(with: self.viewProvider(item))
+        }
+        
+        return cell
     }
 
     // MARK: UICollectionViewDelegate
@@ -338,20 +394,20 @@ UICollectionViewDataSourcePrefetching {
 
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
 
-        let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row] }
-
-        for item in fetchedItems where !prefetchedViewCache.keys.contains(item.hashValue) {
-            let premade = UIHostingController(rootView: AnyView(viewProvider(item)))
-            prefetchedViewCache[item.hashValue] = premade
-        }
+//        let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row] }
+//
+//        for item in fetchedItems where !prefetchedViewCache.keys.contains(item.hashValue) {
+//            let premade = UIHostingController(rootView: AnyView(viewProvider(item)))
+//            prefetchedViewCache[item.hashValue] = premade
+//        }
     }
 
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
 
-        let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row] }
-
-        for item in fetchedItems where !prefetchedViewCache.keys.contains(item.hashValue) {
-            prefetchedViewCache.removeValue(forKey: item.hashValue)
-        }
+//        let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row] }
+//
+//        for item in fetchedItems where !prefetchedViewCache.keys.contains(item.hashValue) {
+//            prefetchedViewCache.removeValue(forKey: item.hashValue)
+//        }
     }
 }
