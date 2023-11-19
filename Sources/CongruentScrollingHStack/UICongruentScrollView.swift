@@ -90,8 +90,6 @@ class UICongruentScrollView<Item: Hashable>: UIView,
             self.layoutSubviews()
         }
 
-        configureDataSource()
-
         updateItems(with: items)
     }
 
@@ -119,11 +117,14 @@ class UICongruentScrollView<Item: Hashable>: UIView,
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.showsHorizontalScrollIndicator = false
-        collectionView.automaticallyAdjustsScrollIndicatorInsets = false
+        collectionView.register(HostingCollectionViewCell.self, forCellWithReuseIdentifier: HostingCollectionViewCell.reuseIdentifier)
         collectionView.delegate = self
+        collectionView.dataSource = self
+        collectionView.prefetchDataSource = self
+        collectionView.showsHorizontalScrollIndicator = false
         collectionView.backgroundColor = nil
         collectionView.alwaysBounceHorizontal = true
+
 
         if scrollBehavior == .itemPaging {
             collectionView.decelerationRate = .fast
@@ -180,37 +181,6 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         let singleItem = UIHostingController(rootView: view)
         singleItem.view.sizeToFit()
         return singleItem.view.bounds.size
-    }
-
-    private func configureDataSource() {
-
-//        let cellRegistration = UICollectionView.CellRegistration<HostingCollectionViewCell, Item> { cell, _, item in
-//            if let premade = self.prefetchedViewCache[item.hashValue] {
-//                cell.setupHostingView(premade: premade)
-//                self.prefetchedViewCache.removeValue(forKey: item.hashValue)
-//            } else {
-//                cell.setupHostingView(with: self.viewProvider(item))
-//            }
-//        }
-//
-//        dataSource = UICollectionViewDiffableDataSource(collectionView: collectionView) { collectionView, indexPath, _ in
-//            
-//            let i: Int
-//            
-//            if self.wrapAround {
-//                i = indexPath.row % self.items.wrappedValue.count
-//            } else {
-//                i = indexPath.row
-//            }
-//            
-//            let item = self.items.wrappedValue[indexPath.row]
-//            return collectionView.dequeueConfiguredReusableCell(using: cellRegistration, for: indexPath, item: item)
-//        }
-
-        collectionView.register(HostingCollectionViewCell.self, forCellWithReuseIdentifier: HostingCollectionViewCell.reuseIdentifier)
-        
-        collectionView.dataSource = self
-        collectionView.prefetchDataSource = self
     }
 
     func updateItems(with newItems: Binding<OrderedSet<Item>>) {
