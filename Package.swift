@@ -16,14 +16,18 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-collections.git", exact: .init(1, 0, 5)),
+        .package(url: "https://github.com/apple/swift-collections.git", exact: "1.0.5"),
+        .package(url: "https://github.com/ra1028/DifferenceKit", from: "1.3.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "CongruentScrollingHStack",
-            dependencies: [.product(name: "OrderedCollections", package: "swift-collections")]
+            dependencies: [
+                .product(name: "OrderedCollections", package: "swift-collections"),
+                .product(name: "DifferenceKit", package: "DifferenceKit"),
+            ]
         ),
     ]
 )

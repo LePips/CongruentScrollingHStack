@@ -1,7 +1,7 @@
 import SwiftUI
 
 class HostingCollectionViewCell: UICollectionViewCell {
-    
+
     static let reuseIdentifier = "HostingCollectionViewCell"
 
     override func prepareForReuse() {

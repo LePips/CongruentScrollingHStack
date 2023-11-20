@@ -6,24 +6,30 @@ public struct CongruentScrollingHStack<Item: Hashable>: View {
     @StateObject
     private var sizeObserver = SizeObserver()
 
-    private var didReachTrailingSide: () -> Void
-    private var didReachTrailingSideOffset: CGFloat
-    private var didScrollToItems: ([Item]) -> Void
-    private let horizontalInset: CGFloat
-    private let items: Binding<OrderedSet<Item>>
-    private let itemSpacing: CGFloat
-    private let layout: CongruentScrollingHStackLayout
-    private let scrollBehavior: CongruentScrollingHStackScrollBehavior
-    private let viewProvider: (Item) -> any View
+    var didReachTrailingSide: () -> Void
+    var didReachTrailingSideOffset: CGFloat
+    var didScrollToItems: ([Item]) -> Void
+    let horizontalInset: CGFloat
+    var isCarousel: Bool
+    let items: Binding<OrderedSet<Item>>
+    let itemSpacing: CGFloat
+    let layout: CongruentScrollingHStackLayout
+    var onReachedLeadingSide: () -> Void
+    var onReachedLeadingSideOffset: CGFloat
+    let scrollBehavior: CongruentScrollingHStackScrollBehavior
+    let viewProvider: (Item) -> any View
 
     init(
-        didReachTrailingSide: @escaping () -> Void,
-        didReachTrailingSideOffset: CGFloat,
-        didScrollToItems: @escaping ([Item]) -> Void,
+        didReachTrailingSide: @escaping () -> Void = {},
+        didReachTrailingSideOffset: CGFloat = 0,
+        didScrollToItems: @escaping ([Item]) -> Void = { _ in },
         horizontalInset: CGFloat,
+        isCarousel: Bool = false,
         items: Binding<OrderedSet<Item>>,
         itemSpacing: CGFloat,
         layout: CongruentScrollingHStackLayout,
+        onReachedLeadingSide: @escaping () -> Void = {},
+        onReachedLeadingSideOffset: CGFloat = 0,
         scrollBehavior: CongruentScrollingHStackScrollBehavior,
         viewProvider: @escaping (Item) -> any View
     ) {
@@ -31,9 +37,12 @@ public struct CongruentScrollingHStack<Item: Hashable>: View {
         self.didReachTrailingSideOffset = didReachTrailingSideOffset
         self.didScrollToItems = didScrollToItems
         self.horizontalInset = horizontalInset
+        self.isCarousel = isCarousel
         self.items = items
         self.itemSpacing = itemSpacing
         self.layout = layout
+        self.onReachedLeadingSide = onReachedLeadingSide
+        self.onReachedLeadingSideOffset = onReachedLeadingSideOffset
         self.scrollBehavior = scrollBehavior
         self.viewProvider = viewProvider
     }
@@ -47,25 +56,16 @@ public struct CongruentScrollingHStack<Item: Hashable>: View {
                 didReachTrailingSideOffset: didReachTrailingSideOffset,
                 didScrollToItems: didScrollToItems,
                 horizontalInset: horizontalInset,
+                isCarousel: isCarousel,
                 items: items,
                 itemSpacing: itemSpacing,
                 layout: layout,
+                onReachedLeadingEdge: onReachedLeadingSide,
+                onReachedLeadingEdgeOffset: onReachedLeadingSideOffset,
                 scrollBehavior: scrollBehavior,
                 sizeObserver: sizeObserver,
                 viewProvider: viewProvider
             )
         }
-    }
-}
-
-public extension CongruentScrollingHStack {
-
-    func didScrollToItems(_ action: @escaping ([Item]) -> Void) -> Self {
-        copy(modifying: \.didScrollToItems, to: action)
-    }
-
-    func onReachedTrailingEdge(offset: CGFloat = 0, _ action: @escaping () -> Void) -> Self {
-        copy(modifying: \.didReachTrailingSide, to: action)
-            .copy(modifying: \.didReachTrailingSideOffset, to: offset)
     }
 }

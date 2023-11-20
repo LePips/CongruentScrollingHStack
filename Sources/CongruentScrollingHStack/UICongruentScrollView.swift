@@ -1,9 +1,10 @@
+import DifferenceKit
 import OrderedCollections
 import OSLog
 import SwiftUI
 
 // TODO: comments/documentation
-// TODO: vertical insets? (for shadows)
+// TODO: vertical insets? (like for shadows)
 // TODO: proxy for index selection/paging
 // TODO: did scroll to item with index row?
 // TODO: need to determine way for single item sizing item init (first item init?)
@@ -21,23 +22,31 @@ import SwiftUI
 // TODO: tvOS spacing issue with Button focus
 // - can be solved with padding but should do that here (see vertical insets)?
 // TODO: alwaysBounceHorizontal setting
-// TODO: should prefetch use row instead of hashvalue?
 
-class UICongruentScrollView<Item: Hashable>: UIView, 
-                                                UICollectionViewDataSource,
-                                                UICollectionViewDelegate,
-                                                UICollectionViewDelegateFlowLayout,
-                                             UICollectionViewDataSourcePrefetching {
+// MARK: UICongruentScrollView
+
+class UICongruentScrollView<Item: Hashable>: UIView,
+    UICollectionViewDataSource,
+    UICollectionViewDelegate,
+    UICollectionViewDelegateFlowLayout,
+    UICollectionViewDataSourcePrefetching
+{
 
     private let logger = Logger()
-    
-    private var wrapAround = true
+
+    // carousel
+    private var isCarousel: Bool
     private var effectiveItemCount = 100
 
-    private var dataSource: UICollectionViewDiffableDataSource<Int, Int>!
+    // TODO: rename didReachTrailingSide -> onReachedTrailingSide
+    // events
     private let didReachTrailingSide: () -> Void
     private let didReachTrailingSideOffset: CGFloat
     private let didScrollToItems: ([Item]) -> Void
+    private let onReachedLeadingEdge: () -> Void
+    private let onReachedLeadingEdgeOffset: CGFloat
+
+    // internal
     private var effectiveWidth: CGFloat
     private let horizontalInset: CGFloat
     private var items: Binding<OrderedSet<Item>>
@@ -54,6 +63,8 @@ class UICongruentScrollView<Item: Hashable>: UIView,
             collectionView.collectionViewLayout.invalidateLayout()
         }
     }
+
+    // view providers
     private let viewProvider: (Item) -> any View
 
     // MARK: init
@@ -63,9 +74,12 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         didReachTrailingSideOffset: CGFloat,
         didScrollToItems: @escaping ([Item]) -> Void,
         horizontalInset: CGFloat,
+        isCarousel: Bool,
         items: Binding<OrderedSet<Item>>,
         itemSpacing: CGFloat,
         layout: CongruentScrollingHStackLayout,
+        onReachedLeadingEdge: @escaping () -> Void,
+        onReachedLeadingEdgeOffset: CGFloat,
         scrollBehavior: CongruentScrollingHStackScrollBehavior,
         sizeObserver: SizeObserver,
         viewProvider: @escaping (Item) -> any View
@@ -75,9 +89,12 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         self.didScrollToItems = didScrollToItems
         self.effectiveWidth = 0
         self.horizontalInset = horizontalInset
+        self.isCarousel = isCarousel
         self.items = items
         self.itemSpacing = itemSpacing
         self.layout = layout
+        self.onReachedLeadingEdge = onReachedLeadingEdge
+        self.onReachedLeadingEdgeOffset = onReachedLeadingEdgeOffset
         self.prefetchedViewCache = [:]
         self.scrollBehavior = scrollBehavior
         self.size = .zero
@@ -102,6 +119,8 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         size
     }
 
+    // MARK: collectionView
+
     private lazy var collectionView: UICollectionView = {
 
         let layout = scrollBehavior.flowLayout
@@ -124,7 +143,6 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.backgroundColor = nil
         collectionView.alwaysBounceHorizontal = true
-
 
         if scrollBehavior == .itemPaging {
             collectionView.decelerationRate = .fast
@@ -156,7 +174,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         let height: CGFloat
 
         switch layout {
-        case .columns, .fractionalColumns, .minimumWidth:
+        case .columns, .minimumWidth:
             let itemWidth = itemSize(for: layout).width
             height = singleItemSize(width: itemWidth).height
         case .selfSizingSameSize, .selfSizingVariadicWidth:
@@ -185,24 +203,37 @@ class UICongruentScrollView<Item: Hashable>: UIView,
 
     func updateItems(with newItems: Binding<OrderedSet<Item>>) {
 
-        items = newItems
-        collectionView.reloadData()
+        let changes = StagedChangeset(
+            source: items.wrappedValue.map(\.hashValue),
+            target: newItems.wrappedValue.map(\.hashValue),
+            section: 0
+        )
 
-//        var snapshot = NSDiffableDataSourceSnapshot<Int, Int>()
-//        snapshot.appendSections([0])
-//        snapshot.appendItems(newItems.wrappedValue.map(\.hashValue))
-//        dataSource.apply(snapshot, animatingDifferences: true, completion: nil)
+        items = newItems
+
+        collectionView.reload(using: changes) { _ in
+            // we already set the new binding
+        }
     }
 
     // MARK: UIScrollViewDelegate
 
-    // TODO: state handling
+    // TODO: only call methods when going over boundary, not continuously
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        
-        if wrapAround {
+
+        // leading edge
+        let reachedLeadingPosition = onReachedLeadingEdgeOffset
+        let reachedLeading = scrollView.contentOffset.x <= reachedLeadingPosition
+
+        if reachedLeading {
+            onReachedLeadingEdge()
+        }
+
+        // trailing edge
+        if isCarousel {
             let reachPosition = scrollView.contentSize.width - scrollView.bounds.width * 2
             let reachedTrailing = scrollView.contentOffset.x >= reachPosition
-            
+
             if reachedTrailing {
                 effectiveItemCount += 100
                 collectionView.reloadData()
@@ -227,32 +258,34 @@ class UICongruentScrollView<Item: Hashable>: UIView,
 
         didScrollToItems(visibleItems)
     }
-    
+
     // MARK: UICollectionViewDataSource
-    
+
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        
-        print("number of items: \(effectiveItemCount)")
-        
-        if wrapAround {
-            return effectiveItemCount
+
+        if isCarousel {
+            effectiveItemCount
         } else {
-            return items.wrappedValue.count
+            items.wrappedValue.count
         }
     }
-    
+
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: HostingCollectionViewCell.reuseIdentifier, for: indexPath) as! HostingCollectionViewCell
-        let item = self.items.wrappedValue[indexPath.row % items.wrappedValue.count]
-        
-        if let premade = self.prefetchedViewCache[item.hashValue] {
+
+        let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: HostingCollectionViewCell.reuseIdentifier,
+            for: indexPath
+        ) as! HostingCollectionViewCell
+
+        let item = items.wrappedValue[indexPath.row % items.wrappedValue.count]
+
+        if let premade = prefetchedViewCache[item.hashValue] {
             cell.setupHostingView(premade: premade)
-            self.prefetchedViewCache.removeValue(forKey: item.hashValue)
+            prefetchedViewCache.removeValue(forKey: item.hashValue)
         } else {
-            cell.setupHostingView(with: self.viewProvider(item))
+            cell.setupHostingView(with: viewProvider(item))
         }
-        
+
         return cell
     }
 
@@ -272,8 +305,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
                 prefetch.view.sizeToFit()
                 return prefetch.view.bounds.size
             } else {
-                let view: AnyView = AnyView(viewProvider(item))
-                let singleItem = UIHostingController(rootView: view)
+                let singleItem = UIHostingController(rootView: AnyView(viewProvider(item)))
                 singleItem.view.sizeToFit()
                 return singleItem.view.bounds.size
             }
@@ -292,11 +324,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
 
         switch layout {
         case let .columns(columns, trailingInset: trailingInset):
-            let width = itemWidth(columns: CGFloat(columns), trailingInset: trailingInset)
-            guard width >= 0 else { return CGSize(width: 0, height: size.height) }
-            return CGSize(width: width, height: size.height)
-        case let .fractionalColumns(columns):
-            let width = itemWidth(columns: columns)
+            let width = itemWidth(columns: columns, trailingInset: trailingInset)
             guard width >= 0 else { return CGSize(width: 0, height: size.height) }
             return CGSize(width: width, height: size.height)
         case let .minimumWidth(width):
@@ -356,6 +384,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         return itemWidth(columns: columns)
     }
 
+    // required for tvOS
     func collectionView(_ collectionView: UICollectionView, canFocusItemAt indexPath: IndexPath) -> Bool {
         false
     }
@@ -364,20 +393,20 @@ class UICongruentScrollView<Item: Hashable>: UIView,
 
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
 
-//        let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row] }
-//
-//        for item in fetchedItems where !prefetchedViewCache.keys.contains(item.hashValue) {
-//            let premade = UIHostingController(rootView: AnyView(viewProvider(item)))
-//            prefetchedViewCache[item.hashValue] = premade
-//        }
+        let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row % items.wrappedValue.count] }
+
+        for item in fetchedItems where !prefetchedViewCache.keys.contains(item.hashValue) {
+            let premade = UIHostingController(rootView: AnyView(viewProvider(item)))
+            prefetchedViewCache[item.hashValue] = premade
+        }
     }
 
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
 
-//        let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row] }
-//
-//        for item in fetchedItems where !prefetchedViewCache.keys.contains(item.hashValue) {
-//            prefetchedViewCache.removeValue(forKey: item.hashValue)
-//        }
+        let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row % items.wrappedValue.count] }
+
+        for item in fetchedItems where !prefetchedViewCache.keys.contains(item.hashValue) {
+            prefetchedViewCache.removeValue(forKey: item.hashValue)
+        }
     }
 }

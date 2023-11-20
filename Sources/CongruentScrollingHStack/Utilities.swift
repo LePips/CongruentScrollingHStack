@@ -1,5 +1,8 @@
+import DifferenceKit
 import OrderedCollections
 import SwiftUI
+
+extension Int: ContentEquatable, ContentIdentifiable {}
 
 public extension OrderedSet {
 

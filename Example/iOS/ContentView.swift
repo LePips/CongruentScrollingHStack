@@ -17,7 +17,11 @@ struct ContentView: View {
     var isFractionalColumnDescriptionPresented = false
     @State
     var isVariadicWidthsDescriptionPresented = false
+    @State
+    var isOnReachedEdgeDescriptionPresented = false
 
+    @State
+    var didReachEdgeColor = Color.red
     @State
     var uuids = OrderedSet((0 ..< 100).map { _ in UUID() })
 
@@ -34,27 +38,8 @@ struct ContentView: View {
         .mint,
         .teal,
     ]
-    
-    var body: some View {
-        NavigationView {
-            ScrollView(showsIndicators: false) {
-                VStack {
-                    CongruentScrollingHStack(0 ..< 20) { i in
-                        ZStack {
-                            Color.secondary
-                            
-                            Text("\(i)")
-                        }
-                        .cornerRadius(5)
-                        .aspectRatio(1, contentMode: .fill)
-                        .frame(width: 75)
-                    }
-                }
-            }
-        }
-    }
 
-    var abody: some View {
+    var body: some View {
         NavigationView {
             ScrollView(showsIndicators: false) {
                 VStack {
@@ -87,9 +72,11 @@ struct ContentView: View {
                     }
                     .alwaysPopover(isPresented: $isEndlessColorsDescriptionPresented) {
                         VStack {
-                            Text("Top: 3 columns/50 columnTrailingInset/continuous")
+                            Text("Both: 3 columns/asCarousel")
 
-                            Text("Bottom: 3 columns/continuousLeadingEdge")
+                            Text("Top: 50 columnTrailingInset/continuous")
+
+                            Text("Bottom: continuousLeadingEdge")
                         }
                         .font(.subheadline.weight(.light))
                         .foregroundStyle(.secondary)
@@ -97,44 +84,26 @@ struct ContentView: View {
                     }
 
                     CongruentScrollingHStack(
-                        items: $uuids,
+                        0 ..< 72,
                         columns: 3,
                         columnTrailingInset: 50
-                    ) { uuid in
-                        Button {
-                            print(uuid.uuidString)
-                        } label: {
-                            ZStack {
-                                Color.secondary
-
-                                colors.randomElement()!
-                                    .aspectRatio(2 / 3, contentMode: .fill)
-                            }
+                    ) { i in
+                        Color(hue: Double(i * 5) / 360, saturation: 1, brightness: 1)
+                            .aspectRatio(2 / 3, contentMode: .fill)
                             .cornerRadius(5)
-                        }
                     }
-                    .onReachedTrailingEdge(offset: 300) {
-                        let newUUIDS = (0 ..< 100).map { _ in UUID() }
-                        uuids.append(contentsOf: newUUIDS)
-                    }
+                    .asCarousel()
 
-                    CongruentScrollingHStack(items: $uuids, columns: 3, scrollBehavior: .continuousLeadingEdge) { uuid in
-                        Button {
-                            print(uuid.uuidString)
-                        } label: {
-                            ZStack {
-                                Color.secondary
-
-                                colors.randomElement()!
-                                    .aspectRatio(2 / 3, contentMode: .fill)
-                            }
+                    CongruentScrollingHStack(
+                        0 ..< 72,
+                        columns: 3,
+                        scrollBehavior: .continuousLeadingEdge
+                    ) { i in
+                        Color(hue: Double(i * 5) / 360, saturation: 1, brightness: 1)
+                            .aspectRatio(2 / 3, contentMode: .fill)
                             .cornerRadius(5)
-                        }
                     }
-                    .onReachedTrailingEdge(offset: 300) {
-                        let newUUIDS = (0 ..< 100).map { _ in UUID() }
-                        uuids.append(contentsOf: newUUIDS)
-                    }
+                    .asCarousel()
 
                     Button {
                         isColorGridDescriptionPresented = true
@@ -289,6 +258,31 @@ struct ContentView: View {
                             colors.randomElement()!
                                 .frame(width: 300, height: 200)
                         }
+                    }
+
+                    Button {
+                        isOnReachedEdgeDescriptionPresented = true
+                    } label: {
+                        Text("On Reached Edge")
+                            .font(.title3)
+                            .fontWeight(.bold)
+                    }
+                    .alwaysPopover(isPresented: $isOnReachedEdgeDescriptionPresented) {
+                        Text("cells will be blue after reaching the trailing edge, red after reaching leading edge")
+                            .frame(width: 300)
+                            .font(.subheadline.weight(.light))
+                            .foregroundStyle(.secondary)
+                            .padding()
+                    }
+
+                    CongruentScrollingHStack(0 ..< 9, columns: 3) { _ in
+                        ColorTrailingEdgeView(color: $didReachEdgeColor)
+                    }
+                    .onReachedLeadingEdge {
+                        didReachEdgeColor = .red
+                    }
+                    .onReachedTrailingEdge {
+                        didReachEdgeColor = .blue
                     }
                 }
             }
