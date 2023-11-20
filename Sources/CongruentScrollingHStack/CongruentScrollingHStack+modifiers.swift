@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 public extension CongruentScrollingHStack {
 
@@ -18,5 +19,9 @@ public extension CongruentScrollingHStack {
     func onReachedTrailingEdge(offset: CGFloat = 0, _ action: @escaping () -> Void) -> Self {
         copy(modifying: \.didReachTrailingSide, to: action)
             .copy(modifying: \.didReachTrailingSideOffset, to: offset)
+    }
+    
+    func placeholder(_ content: @escaping (Int) -> any View) -> Self {
+        copy(modifying: \.placeholderViewProvider, to: content)
     }
 }

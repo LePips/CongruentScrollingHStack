@@ -23,7 +23,7 @@ struct ContentView: View {
     @State
     var didReachEdgeColor = Color.red
     @State
-    var uuids = OrderedSet((0 ..< 100).map { _ in UUID() })
+    var numbers = OrderedSet((0 ..< 10))
 
     let colors: [Color] = [
         .blue,
@@ -38,8 +38,59 @@ struct ContentView: View {
         .mint,
         .teal,
     ]
-
+    
+    @State
+    var myState: CongruentScrollingHStackState<Int> = .placeholder(10)
+    
     var body: some View {
+        NavigationView {
+            ScrollView(showsIndicators: false) {
+                VStack {
+                    
+                    Button {
+                        withAnimation {
+                            switch myState {
+                            case .items:
+                                myState = .placeholder(5)
+                            case .placeholder:
+                                myState = .items($numbers)
+                            }
+                        }
+                    } label: {
+                        Text("Toggle State")
+                    }
+                    
+                    CongruentScrollingHStack(state: $myState, columns: 3) { i in
+                        VStack {
+                            Color.red
+                                .opacity(0.7)
+                                .aspectRatio(2 / 3, contentMode: .fill)
+                                .cornerRadius(5)
+                            
+                            Text("Title")
+                        }
+                    }
+                    .placeholder { i in
+                        VStack {
+                            Color.secondary
+                                .opacity(0.7)
+                                .aspectRatio(2 / 3, contentMode: .fill)
+                                .cornerRadius(5)
+                            
+                            Text("Placeholder")
+                        }
+                        .redacted(reason: .placeholder)
+                    }
+                    .onReachedTrailingEdge {
+                        numbers.append(contentsOf: (numbers.count ..< numbers.count + 10))
+                        myState = .items($numbers)
+                    }
+                }
+            }
+        }
+    }
+
+    var abody: some View {
         NavigationView {
             ScrollView(showsIndicators: false) {
                 VStack {

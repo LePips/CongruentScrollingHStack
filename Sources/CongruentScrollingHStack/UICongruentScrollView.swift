@@ -63,8 +63,10 @@ class UICongruentScrollView<Item: Hashable>: UIView,
             collectionView.collectionViewLayout.invalidateLayout()
         }
     }
+    private var state: CongruentScrollingHStackState<Item>
 
     // view providers
+    private let placeholderViewProvider: (Int) -> any View
     private let viewProvider: (Item) -> any View
 
     // MARK: init
@@ -80,8 +82,10 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         layout: CongruentScrollingHStackLayout,
         onReachedLeadingEdge: @escaping () -> Void,
         onReachedLeadingEdgeOffset: CGFloat,
+        placeholderViewProvider: @escaping (Int) -> any View,
         scrollBehavior: CongruentScrollingHStackScrollBehavior,
         sizeObserver: SizeObserver,
+        state: CongruentScrollingHStackState<Item>,
         viewProvider: @escaping (Item) -> any View
     ) {
         self.didReachTrailingSide = didReachTrailingSide
@@ -95,9 +99,11 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         self.layout = layout
         self.onReachedLeadingEdge = onReachedLeadingEdge
         self.onReachedLeadingEdgeOffset = onReachedLeadingEdgeOffset
+        self.placeholderViewProvider = placeholderViewProvider
         self.prefetchedViewCache = [:]
         self.scrollBehavior = scrollBehavior
         self.size = .zero
+        self.state = state
         self.viewProvider = viewProvider
 
         super.init(frame: .zero)
@@ -107,7 +113,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
             self.layoutSubviews()
         }
 
-        updateItems(with: items)
+//        updateItems(with: items)
     }
 
     @available(*, unavailable)
@@ -166,7 +172,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         super.layoutSubviews()
 
         size = computeSize()
-        updateItems(with: items)
+        updateItems(with: .constant(state))
     }
 
     private func computeSize() -> CGSize {
@@ -185,41 +191,86 @@ class UICongruentScrollView<Item: Hashable>: UIView,
     }
 
     private func singleItemSize(width: CGFloat? = nil) -> CGSize {
-
-        guard !items.wrappedValue.isEmpty else { return .init(width: width ?? 0, height: 0) }
-
+        
         let view: AnyView
-
-        if let width, width > 0 {
-            view = AnyView(viewProvider(items.wrappedValue[0]).frame(width: width))
-        } else {
-            view = AnyView(viewProvider(items.wrappedValue[0]))
+        
+        switch state {
+        case .items(let items):
+            guard !items.wrappedValue.isEmpty else { return .init(width: width ?? 0, height: 0) }
+            
+            if let width, width > 0 {
+                view = AnyView(viewProvider(items.wrappedValue[0]).frame(width: width))
+            } else {
+                view = AnyView(viewProvider(items.wrappedValue[0]))
+            }
+            
+        case .placeholder(let amount):
+            guard amount > 0 else { return .init(width: width ?? 0, height: 0) }
+            
+            if let width, width > 0 {
+                view = AnyView(placeholderViewProvider(0).frame(width: width))
+            } else {
+                view = AnyView(placeholderViewProvider(0))
+            }
         }
 
         let singleItem = UIHostingController(rootView: view)
         singleItem.view.sizeToFit()
         return singleItem.view.bounds.size
     }
-
-    func updateItems(with newItems: Binding<OrderedSet<Item>>) {
-
-        let changes = StagedChangeset(
-            source: items.wrappedValue.map(\.hashValue),
-            target: newItems.wrappedValue.map(\.hashValue),
-            section: 0
-        )
-
-        items = newItems
-
-        collectionView.reload(using: changes) { _ in
-            // we already set the new binding
+    
+    func updateItems(with newState: Binding<CongruentScrollingHStackState<Item>>) {
+        
+        state = newState.wrappedValue
+        
+        switch state {
+        case .items(let newItems):
+            let changes = StagedChangeset(
+                source: items.wrappedValue.map(\.hashValue),
+                target: newItems.wrappedValue.map(\.hashValue),
+                section: 0
+            )
+            
+            let preItemIsEmpty = items.wrappedValue.isEmpty
+            
+            items = newItems
+            
+            collectionView.numberOfItems(inSection: 0)
+            
+            if preItemIsEmpty {
+                collectionView.reloadData()
+            } else {
+                collectionView.reload(using: changes) { _ in
+                    // we already set the new binding
+                }
+            }
+            
+        case .placeholder:
+            collectionView.reloadData()
         }
     }
+
+//    func updateItems(with newItems: Binding<OrderedSet<Item>>) {
+//
+//        let changes = StagedChangeset(
+//            source: items.wrappedValue.map(\.hashValue),
+//            target: newItems.wrappedValue.map(\.hashValue),
+//            section: 0
+//        )
+//
+//        items = newItems
+//
+//        collectionView.reload(using: changes) { _ in
+//            // we already set the new binding
+//        }
+//    }
 
     // MARK: UIScrollViewDelegate
 
     // TODO: only call methods when going over boundary, not continuously
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        
+        guard case CongruentScrollingHStackState.items = state else { return }
 
         // leading edge
         let reachedLeadingPosition = onReachedLeadingEdgeOffset
@@ -251,6 +302,8 @@ class UICongruentScrollView<Item: Hashable>: UIView,
     // TODO: should probably be instead when items just became visible / make separate method?
     // TODO: remove items on edges in certain scrollBehaviors + layouts?
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        
+        guard case CongruentScrollingHStackState.items = state else { return }
 
         let visibleItems = collectionView
             .indexPathsForVisibleItems
@@ -262,30 +315,41 @@ class UICongruentScrollView<Item: Hashable>: UIView,
     // MARK: UICollectionViewDataSource
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-
-        if isCarousel {
-            effectiveItemCount
-        } else {
-            items.wrappedValue.count
+        
+        switch state {
+        case .items(let items):
+            return if isCarousel {
+                effectiveItemCount
+            } else {
+                items.wrappedValue.count
+            }
+        case .placeholder(let amount):
+            return amount
         }
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-
+        
         let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: HostingCollectionViewCell.reuseIdentifier,
             for: indexPath
         ) as! HostingCollectionViewCell
+        
+        switch state {
+        case .items:
+            let item = items.wrappedValue[indexPath.row % items.wrappedValue.count]
 
-        let item = items.wrappedValue[indexPath.row % items.wrappedValue.count]
+            if let premade = prefetchedViewCache[item.hashValue] {
+                cell.setupHostingView(premade: premade)
+                prefetchedViewCache.removeValue(forKey: item.hashValue)
+            } else {
+                cell.setupHostingView(with: viewProvider(item))
+            }
 
-        if let premade = prefetchedViewCache[item.hashValue] {
-            cell.setupHostingView(premade: premade)
-            prefetchedViewCache.removeValue(forKey: item.hashValue)
-        } else {
-            cell.setupHostingView(with: viewProvider(item))
+        case .placeholder:
+            cell.setupHostingView(with: placeholderViewProvider(indexPath.row))
         }
-
+        
         return cell
     }
 
@@ -392,6 +456,8 @@ class UICongruentScrollView<Item: Hashable>: UIView,
     // MARK: UICollectionViewDataSourcePrefetching
 
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        
+        guard case CongruentScrollingHStackState.items = state else { return }
 
         let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row % items.wrappedValue.count] }
 
@@ -402,6 +468,8 @@ class UICongruentScrollView<Item: Hashable>: UIView,
     }
 
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
+        
+        guard case CongruentScrollingHStackState.items = state else { return }
 
         let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row % items.wrappedValue.count] }
 
