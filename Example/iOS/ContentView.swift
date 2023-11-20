@@ -73,7 +73,7 @@ struct ContentView: View {
                     .placeholder { i in
                         VStack {
                             Color.secondary
-                                .opacity(0.7)
+                                .opacity(0.3)
                                 .aspectRatio(2 / 3, contentMode: .fill)
                                 .cornerRadius(5)
                             
@@ -81,9 +81,8 @@ struct ContentView: View {
                         }
                         .redacted(reason: .placeholder)
                     }
-                    .onReachedTrailingEdge {
-                        numbers.append(contentsOf: (numbers.count ..< numbers.count + 10))
-                        myState = .items($numbers)
+                    .onReachedTrailingEdge(offset: -20) {
+                        numbers.append(numbers.count)
                     }
                 }
             }

@@ -221,6 +221,12 @@ class UICongruentScrollView<Item: Hashable>: UIView,
     
     func updateItems(with newState: Binding<CongruentScrollingHStackState<Item>>) {
         
+        let isNewState = state != newState.wrappedValue
+        
+        if isNewState {
+            collectionView.setContentOffset(.zero, animated: true`)
+        }
+        
         state = newState.wrappedValue
         
         switch state {
@@ -231,39 +237,19 @@ class UICongruentScrollView<Item: Hashable>: UIView,
                 section: 0
             )
             
-            let preItemIsEmpty = items.wrappedValue.isEmpty
-            
             items = newItems
             
-            collectionView.numberOfItems(inSection: 0)
-            
-            if preItemIsEmpty {
+            if isNewState {
                 collectionView.reloadData()
             } else {
                 collectionView.reload(using: changes) { _ in
                     // we already set the new binding
                 }
             }
-            
         case .placeholder:
             collectionView.reloadData()
         }
     }
-
-//    func updateItems(with newItems: Binding<OrderedSet<Item>>) {
-//
-//        let changes = StagedChangeset(
-//            source: items.wrappedValue.map(\.hashValue),
-//            target: newItems.wrappedValue.map(\.hashValue),
-//            section: 0
-//        )
-//
-//        items = newItems
-//
-//        collectionView.reload(using: changes) { _ in
-//            // we already set the new binding
-//        }
-//    }
 
     // MARK: UIScrollViewDelegate
 

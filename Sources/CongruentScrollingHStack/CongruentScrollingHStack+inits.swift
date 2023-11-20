@@ -22,7 +22,6 @@ public extension CongruentScrollingHStack {
     ) {
         self.init(
             horizontalInset: horizontalInset,
-//            items: items,
             itemSpacing: spacing,
             layout: .columns(CGFloat(columns), trailingInset: columnTrailingInset),
             scrollBehavior: scrollBehavior,
@@ -41,7 +40,6 @@ public extension CongruentScrollingHStack {
     ) {
         self.init(
             horizontalInset: horizontalInset,
-//            items: items,
             itemSpacing: spacing,
             layout: .columns(columns, trailingInset: 0),
             scrollBehavior: scrollBehavior,
@@ -60,7 +58,6 @@ public extension CongruentScrollingHStack {
     ) {
         self.init(
             horizontalInset: inset,
-//            items: items,
             itemSpacing: spacing,
             layout: .minimumWidth(minWidth),
             scrollBehavior: scrollBehavior,
@@ -79,7 +76,6 @@ public extension CongruentScrollingHStack {
     ) {
         self.init(
             horizontalInset: inset,
-//            items: items,
             itemSpacing: spacing,
             layout: variadicWidths ? .selfSizingVariadicWidth : .selfSizingSameSize,
             scrollBehavior: scrollBehavior,
@@ -104,7 +100,6 @@ public extension CongruentScrollingHStack where Item == Int {
     ) {
         self.init(
             horizontalInset: inset,
-//            items: .constant(OrderedSet(data)),
             itemSpacing: spacing,
             layout: variadicWidths ? .selfSizingVariadicWidth : .selfSizingSameSize,
             scrollBehavior: scrollBehavior,
@@ -124,7 +119,6 @@ public extension CongruentScrollingHStack where Item == Int {
     ) {
         self.init(
             horizontalInset: inset,
-//            items: .constant(OrderedSet(data)),
             itemSpacing: spacing,
             layout: .columns(CGFloat(columns), trailingInset: columnTrailingInset),
             scrollBehavior: scrollBehavior,
@@ -143,7 +137,6 @@ public extension CongruentScrollingHStack where Item == Int {
     ) {
         self.init(
             horizontalInset: inset,
-//            items: .constant(OrderedSet(data)),
             itemSpacing: spacing,
             layout: .columns(columns, trailingInset: 0),
             scrollBehavior: scrollBehavior,
@@ -165,7 +158,6 @@ public extension CongruentScrollingHStack where Item == Int {
     ) {
         self.init(
             horizontalInset: inset,
-//            items: .constant(OrderedSet(data)),
             itemSpacing: spacing,
             layout: .columns(CGFloat(columns), trailingInset: columnTrailingInset),
             scrollBehavior: scrollBehavior,
@@ -188,7 +180,6 @@ public extension CongruentScrollingHStack where Item == Int {
     ) {
         self.init(
             horizontalInset: inset,
-//            items: .constant(OrderedSet(data)),
             itemSpacing: spacing,
             layout: .selfSizingSameSize,
             scrollBehavior: scrollBehavior,

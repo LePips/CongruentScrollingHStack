@@ -10,8 +10,19 @@ enum CongruentScrollingHStackLayout {
     case selfSizingVariadicWidth
 }
 
-public enum CongruentScrollingHStackState<Item: Hashable> {
+public enum CongruentScrollingHStackState<Item: Hashable>: Equatable {
     
     case items(Binding<OrderedSet<Item>>)
     case placeholder(Int)
+    
+    public static func ==(lhs: CongruentScrollingHStackState, rhs: CongruentScrollingHStackState) -> Bool {
+        switch (lhs, rhs) {
+        case (.items, .items):
+            true
+        case (.placeholder, .placeholder):
+            true
+        default:
+            false
+        }
+    }
 }
