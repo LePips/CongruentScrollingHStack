@@ -224,7 +224,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         let isNewState = state != newState.wrappedValue
         
         if isNewState {
-            collectionView.setContentOffset(.zero, animated: true`)
+            collectionView.setContentOffset(.zero, animated: true)
         }
         
         state = newState.wrappedValue
