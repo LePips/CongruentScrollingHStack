@@ -2,7 +2,53 @@ import DifferenceKit
 import OrderedCollections
 import SwiftUI
 
+// MARK: CGFloat/Int math
+
+func *(lhs: CGFloat, rhs: Int) -> CGFloat {
+    lhs * CGFloat(rhs)
+}
+
+func *(lhs: Int, rhs: CGFloat) -> CGFloat {
+    CGFloat(lhs) * rhs
+}
+
+func /(lhs: CGFloat, rhs: Int) -> CGFloat {
+    lhs / CGFloat(rhs)
+}
+
+func /(lhs: Int, rhs: CGFloat) -> CGFloat {
+    CGFloat(lhs) / rhs
+}
+
+// MARK: Collection
+
+extension Sequence {
+    
+    func striding(by step: Int) -> [Element] {
+        
+        guard step > 1 else { return Array(self) }
+        
+        var results: [Element] = []
+        var iterator = makeIterator()
+        var i = 0
+        
+        while let element = iterator.next() {
+            if i % step == 0 {
+                results.append(element)
+            }
+            
+            i += 1
+        }
+        
+        return results
+    }
+}
+
+// MARK: Int
+
 extension Int: ContentEquatable, ContentIdentifiable {}
+
+// MARK: OrderedSet
 
 public extension OrderedSet {
 
@@ -18,6 +64,8 @@ public extension OrderedSet {
         return didContainDuplicate
     }
 }
+
+// MARK: UICollectionView
 
 extension UICollectionView {
 
@@ -41,6 +89,8 @@ extension UICollectionView {
     }
 }
 
+// MARK: UIEdgeInsets
+
 extension UIEdgeInsets {
 
     var horizontal: CGFloat {
@@ -51,6 +101,8 @@ extension UIEdgeInsets {
         top + bottom
     }
 }
+
+// MARK: View
 
 extension View {
 

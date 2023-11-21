@@ -38,8 +38,46 @@ struct ContentView: View {
         .mint,
         .teal,
     ]
-
+    
     var body: some View {
+        NavigationView {
+            ScrollView(showsIndicators: false) {
+                VStack {
+                    
+                    CongruentScrollingHStack(
+                        0 ..< 9,
+                        columns: 2,
+                        rows: 2,
+                        scrollBehavior: .itemPaging
+                    ) { i in
+                        ZStack {
+                            Color.secondary
+                                .opacity(0.2)
+                            
+                            Text("\(i)")
+                        }
+                        .aspectRatio(1, contentMode: .fill)
+                    }
+                    
+                    CongruentScrollingHStack(
+                        0 ..< 18,
+                        columns: 3,
+                        scrollBehavior: .itemPaging
+                    ) { i in
+                        ZStack {
+                            Color.secondary
+                                .opacity(0.2)
+                            
+                            Text("\(i)")
+                        }
+                        .aspectRatio(2 / 3, contentMode: .fill)
+                    }
+                }
+            }
+        }
+    }
+
+    var abody: some View {
         NavigationView {
             ScrollView(showsIndicators: false) {
                 VStack {

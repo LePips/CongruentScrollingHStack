@@ -24,7 +24,7 @@ public extension CongruentScrollingHStack {
             horizontalInset: horizontalInset,
             items: items,
             itemSpacing: spacing,
-            layout: .columns(CGFloat(columns), trailingInset: columnTrailingInset),
+            layout: .grid(columns: CGFloat(columns), rows: 1, columnTrailingInset: columnTrailingInset),
             scrollBehavior: scrollBehavior,
             viewProvider: content
         )
@@ -42,7 +42,7 @@ public extension CongruentScrollingHStack {
             horizontalInset: horizontalInset,
             items: items,
             itemSpacing: spacing,
-            layout: .columns(columns, trailingInset: 0),
+            layout: .grid(columns: columns, rows: 1, columnTrailingInset: 0),
             scrollBehavior: scrollBehavior,
             viewProvider: content
         )
@@ -60,7 +60,7 @@ public extension CongruentScrollingHStack {
             horizontalInset: inset,
             items: items,
             itemSpacing: spacing,
-            layout: .minimumWidth(minWidth),
+            layout: .minimumWidth(columnWidth: minWidth, rows: 0),
             scrollBehavior: scrollBehavior,
             viewProvider: content
         )
@@ -111,6 +111,7 @@ public extension CongruentScrollingHStack where Item == Int {
     init(
         _ data: Range<Int>,
         columns: Int,
+        rows: Int = 1,
         columnTrailingInset: CGFloat = 0,
         inset: CGFloat = 15,
         spacing: CGFloat = 10,
@@ -121,7 +122,7 @@ public extension CongruentScrollingHStack where Item == Int {
             horizontalInset: inset,
             items: .constant(OrderedSet(data)),
             itemSpacing: spacing,
-            layout: .columns(CGFloat(columns), trailingInset: columnTrailingInset),
+            layout: .grid(columns: CGFloat(columns), rows: rows, columnTrailingInset: 0),
             scrollBehavior: scrollBehavior,
             viewProvider: content
         )
@@ -139,7 +140,7 @@ public extension CongruentScrollingHStack where Item == Int {
             horizontalInset: inset,
             items: .constant(OrderedSet(data)),
             itemSpacing: spacing,
-            layout: .columns(columns, trailingInset: 0),
+            layout: .grid(columns: columns, rows: 1, columnTrailingInset: 0),
             scrollBehavior: scrollBehavior,
             viewProvider: content
         )
