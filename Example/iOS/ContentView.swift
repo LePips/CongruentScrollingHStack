@@ -38,36 +38,36 @@ struct ContentView: View {
         .mint,
         .teal,
     ]
-    
+
     var body: some View {
         NavigationView {
             ScrollView(showsIndicators: false) {
                 VStack {
-                    
+
                     CongruentScrollingHStack(
                         0 ..< 9,
                         columns: 2,
                         rows: 2,
-                        scrollBehavior: .itemPaging
+                        scrollBehavior: .continuousLeadingEdge
                     ) { i in
                         ZStack {
                             Color.secondary
                                 .opacity(0.2)
-                            
+
                             Text("\(i)")
                         }
                         .aspectRatio(1, contentMode: .fill)
                     }
-                    
+
                     CongruentScrollingHStack(
                         0 ..< 18,
                         columns: 3,
-                        scrollBehavior: .itemPaging
+                        scrollBehavior: .columnPaging
                     ) { i in
                         ZStack {
                             Color.secondary
                                 .opacity(0.2)
-                            
+
                             Text("\(i)")
                         }
                         .aspectRatio(2 / 3, contentMode: .fill)
@@ -82,7 +82,7 @@ struct ContentView: View {
             ScrollView(showsIndicators: false) {
                 VStack {
 
-                    CongruentScrollingHStack(0 ..< 10, columns: 1, scrollBehavior: .itemPaging) { _ in
+                    CongruentScrollingHStack(0 ..< 10, columns: 1, scrollBehavior: .columnPaging) { _ in
                         AsyncImage(
                             url: URL(string: "https://picsum.photos/750/500"),
                             transaction: Transaction(animation: .easeInOut)
@@ -217,7 +217,7 @@ struct ContentView: View {
                             .padding()
                     }
 
-                    CongruentScrollingHStack(0 ..< 10, columns: 1, scrollBehavior: .itemPaging) { _ in
+                    CongruentScrollingHStack(0 ..< 10, columns: 1, scrollBehavior: .columnPaging) { _ in
                         colors.randomElement()!
                             .aspectRatio(3, contentMode: .fill)
                     }
@@ -258,7 +258,7 @@ struct ContentView: View {
                     CongruentScrollingHStack(
                         0 ..< 10,
                         columns: 1.5,
-                        scrollBehavior: .itemPaging
+                        scrollBehavior: .columnPaging
                     ) { _ in
                         HStack(spacing: 0) {
                             Color.purple

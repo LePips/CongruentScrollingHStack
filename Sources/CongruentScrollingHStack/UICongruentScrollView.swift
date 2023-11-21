@@ -144,7 +144,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         collectionView.backgroundColor = nil
         collectionView.alwaysBounceHorizontal = true
 
-        if scrollBehavior == .itemPaging {
+        if scrollBehavior == .columnPaging {
             collectionView.decelerationRate = .fast
         }
 
@@ -178,44 +178,44 @@ class UICongruentScrollView<Item: Hashable>: UIView,
 
         switch layout {
         case let .grid(columns, rows, trailingInset):
-            
+
             guard rows > 0 else {
                 logger.warning("Given `rows` is less than or equal to 0, setting to single row display instead.")
                 layout = .grid(columns: columns, rows: 1, columnTrailingInset: trailingInset)
                 return computeSize()
             }
-            
+
             guard columns > 0 else {
                 logger.warning("Given `columns` is less than or equal to 0, setting to single column display instead.")
                 layout = .grid(columns: 1, rows: rows, columnTrailingInset: trailingInset)
                 return computeSize()
             }
-            
+
             if let alignedLayout = (collectionView.flowLayout as? ColumnAlignedLayout) {
                 alignedLayout.rows = rows
             }
-            
+
             let itemWidth = itemSize(for: layout).width
             let spacing = (rows - 1) * itemSpacing
             height = singleItemSize(width: itemWidth).height * rows + spacing
         case let .minimumWidth(minWidth, rows):
-            
+
             guard minWidth > 0 else {
                 logger.warning("Given `minWidth` is less than or equal to 0, setting to single column display instead.")
                 layout = .grid(columns: 1, rows: rows, columnTrailingInset: 0)
                 return computeSize()
             }
-            
+
             guard rows > 0 else {
                 logger.warning("Given `rows` is less than or equal to 0, setting to single row display instead.")
                 layout = .minimumWidth(columnWidth: minWidth, rows: 1)
                 return computeSize()
             }
-            
+
             if let alignedLayout = (collectionView.flowLayout as? ColumnAlignedLayout) {
                 alignedLayout.rows = rows
             }
-            
+
             let itemWidth = itemSize(for: layout).width
             let spacing = (rows - 1) * itemSpacing
             height = singleItemSize(width: itemWidth).height * rows + spacing
@@ -242,7 +242,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
         singleItem.view.sizeToFit()
         return singleItem.view.bounds.size
     }
-    
+
     // MARK: updateItems
 
     func updateItems(with newItems: Binding<OrderedSet<Item>>) {
@@ -290,6 +290,13 @@ class UICongruentScrollView<Item: Hashable>: UIView,
                 didReachTrailingSide()
             }
         }
+    }
+
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+
+//        if let layout = collectionView.flowLayout as? ScrollViewStatefulLayout {
+//            layout.scrollViewWillBeginDraggingContentOffset = scrollView.contentOffset.x
+//        }
     }
 
     // TODO: should probably be instead when items just became visible / make separate method?
@@ -363,7 +370,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
             }
         }
     }
-    
+
     // MARK: item size
 
     private func itemSize(for layout: CongruentScrollingHStackLayout) -> CGSize {
@@ -373,22 +380,22 @@ class UICongruentScrollView<Item: Hashable>: UIView,
             let width = itemWidth(columns: columns, trailingInset: trailingInset)
             let spacing = (rows - 1) * itemSpacing
             return CGSize(width: width, height: (size.height - spacing) / rows)
-            
+
         case let .minimumWidth(minWidth, rows):
             let width = itemWidth(minWidth: minWidth)
             let spacing = (rows - 1) * itemSpacing
             return CGSize(width: width, height: (size.height - spacing) / rows)
-            
+
         case .selfSizingSameSize, .selfSizingVariadicWidth:
             return singleItemSize()
         }
     }
 
     // MARK: item width
-    
+
     /// Precondition: columns > 0
     private func itemWidth(columns: CGFloat, trailingInset: CGFloat = 0) -> CGFloat {
-        
+
         precondition(columns > 0, "Given `columns` is less than or equal to 0")
 
         let itemSpaces: CGFloat
@@ -410,7 +417,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
 
     /// Precondition: minWidth > 0
     private func itemWidth(minWidth: CGFloat) -> CGFloat {
-        
+
         precondition(minWidth > 0, "Given `minWidth` is less than or equal to 0")
 
         // Ensure that each item has a given minimum width
@@ -438,6 +445,7 @@ class UICongruentScrollView<Item: Hashable>: UIView,
 
     // MARK: UICollectionViewDataSourcePrefetching
 
+    // TODO: see if these actually do anything regarding prefetching images/View.onAppear
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
 
         let fetchedItems: [Item] = indexPaths.map { items.wrappedValue[$0.row % items.wrappedValue.count] }

@@ -1,38 +1,46 @@
 import UIKit
 
 // TODO: accustom for item sizes > collection view width?
+// TODO: accustom for item spacing which will make no other items appear on targetContentOffset?
 // TODO: centered scroll behavior
+
+// get contentoffset from scrollview begin dragging
+// manually compute offset from item widths
 
 public enum CongruentScrollingHStackScrollBehavior {
 
+    case columnPaging
     case continuous
     case continuousLeadingEdge
-    // TODO: rename to columnPaging
-    case itemPaging
 
     var flowLayout: UICollectionViewFlowLayout {
         switch self {
+        case .columnPaging:
+            ColumnPagingFlowLayout()
         case .continuous:
             UICollectionViewFlowLayout()
         case .continuousLeadingEdge:
             ContinuousLeadingEdgeFlowLayout()
-        case .itemPaging:
-            ColumnPagingFlowLayout()
         }
     }
 }
 
 /// A `UICollectionViewFlowLayout` that aligns with a column of items
-protocol ColumnAlignedLayout: AnyObject, UICollectionViewFlowLayout {
-    
+protocol ColumnAlignedLayout: UICollectionViewFlowLayout {
+
     // Used for determining the correct column to align against
     var rows: Int { get set }
 }
 
-/// A `UICollectionViewFlowLayout` that will stride along columns with a step
-protocol ColumnStridableLayout: AnyObject, UICollectionViewFlowLayout {
-    
+/// A `UICollectionViewFlowLayout` that will stride along columns
+protocol ColumnStridableLayout: UICollectionViewFlowLayout {
+
     var step: Int { get set }
+}
+
+protocol ScrollViewStatefulLayout: UICollectionViewFlowLayout {
+
+    var scrollViewWillBeginDraggingContentOffset: CGFloat { get set }
 }
 
 /// Similar to `UICollectionLayoutSectionOrthogonalScrollingBehavior.continuousGroupLeadingBoundary`, where scrolling will align
@@ -43,7 +51,7 @@ protocol ColumnStridableLayout: AnyObject, UICollectionViewFlowLayout {
 ///   If the proposed target content offset is less than half of the leading columns's center, scrolling will
 ///   with that columns's leading edge. Otherwise, scrolling will align with the next columns's leading edge.
 class ContinuousLeadingEdgeFlowLayout: UICollectionViewFlowLayout, ColumnAlignedLayout {
-    
+
     var rows: Int = 1
 
     override func targetContentOffset(
@@ -67,20 +75,21 @@ class ContinuousLeadingEdgeFlowLayout: UICollectionViewFlowLayout, ColumnAligned
         if proposedContentOffset.x == collectionView!.contentSize.width - collectionView!.bounds.width {
             return proposedContentOffset
         }
-        
-        let startOfColumnAttributes = layoutAttributes.striding(by: rows)
-        
+
+        let startOfColumnAttributes = layoutAttributes
+            .striding(by: rows)
+
         // TODO: remove when allowing item sizes > collection view width
         guard startOfColumnAttributes.count > 1 else { return proposedContentOffset }
 
         let m: CGFloat
-        
+
         if proposedContentOffset.x > startOfColumnAttributes[0].center.x {
             m = startOfColumnAttributes[1].frame.minX
         } else {
             m = startOfColumnAttributes[0].frame.minX
         }
-        
+
         let leadingInset = collectionView!.flowLayout.sectionInset.left
 
         return CGPoint(
@@ -90,46 +99,31 @@ class ContinuousLeadingEdgeFlowLayout: UICollectionViewFlowLayout, ColumnAligned
     }
 }
 
-class ColumnPagingFlowLayout: UICollectionViewFlowLayout, ColumnAlignedLayout, ColumnStridableLayout {
-    
+class ColumnPagingFlowLayout: UICollectionViewFlowLayout, ColumnAlignedLayout {
+
     var rows: Int = 1
-    var step: Int = 3
 
     override func targetContentOffset(
         forProposedContentOffset proposedContentOffset: CGPoint,
         withScrollingVelocity velocity: CGPoint
     ) -> CGPoint {
-        
-        let targetRect: CGRect
-        
-        if step > 1 {
-            targetRect = CGRect(
-                x: collectionView!.contentOffset.x - collectionView!.bounds.width * 2,
-                y: 0,
-                width: collectionView!.bounds.width * 5,
-                height: collectionView!.bounds.height
-            )
-        } else {
-            targetRect = CGRect(
-                x: collectionView!.contentOffset.x,
-                y: 0,
-                width: collectionView!.bounds.size.width,
-                height: collectionView!.bounds.size.height
-            )
-        }
+
+        let targetRect = CGRect(
+            x: collectionView!.contentOffset.x,
+            y: 0,
+            width: collectionView!.bounds.size.width,
+            height: collectionView!.bounds.size.height
+        )
 
         let layoutAttributes = layoutAttributesForElements(in: targetRect)!
 
         // TODO: remove when allowing item sizes > collection view width
         guard layoutAttributes.count > 1 else { return proposedContentOffset }
-        
+
         // TODO: fix column choosing with items in rect
         let startOfColumnAttributes = layoutAttributes
             .striding(by: rows)
-            .striding(by: step)
-        
-        print(startOfColumnAttributes.map(\.frame.minX))
-        
+
         // TODO: remove when allowing item sizes > collection view width
         guard startOfColumnAttributes.count > 1 else { return proposedContentOffset }
 
