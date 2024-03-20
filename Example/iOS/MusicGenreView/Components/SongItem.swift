@@ -47,7 +47,7 @@ extension MusicGenreView {
                                 .padding()
                         }
                         .alwaysPopover(isPresented: $isBooPresented) {
-                            Text("Boo")
+                            Text("👻 Boo")
                                 .padding()
                         }
                         .foregroundStyle(.primary)

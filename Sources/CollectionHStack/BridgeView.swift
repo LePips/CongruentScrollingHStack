@@ -51,7 +51,8 @@ struct BridgeView<Element: Hashable>: UIViewRepresentable {
             with: data,
             allowBouncing: allowBouncing.wrappedValue,
             allowScrolling: allowScrolling.wrappedValue,
-            dataPrefix: dataPrefix.wrappedValue
+            dataPrefix: dataPrefix.wrappedValue,
+            newSize: sizeBinding.wrappedValue
         )
     }
 }

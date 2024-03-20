@@ -15,6 +15,9 @@ public struct CollectionHStack<Element: Hashable>: View {
     
     @State
     private var contentSize: CGSize = .zero
+    
+    @State
+    private var newHeight: CGFloat = 0
 
     @StateObject
     private var sizeObserver = SizeObserver()
@@ -77,8 +80,12 @@ public struct CollectionHStack<Element: Hashable>: View {
 
     public var body: some View {
         ZStack {
-            SizeObserverView(sizeObserver: sizeObserver)
+            Color.clear
                 .frame(height: 1)
+                .onSizeChanged { newSize in
+//                    contentSize.width = newSize.width
+                    sizeObserver.contentSize.width = newSize.width
+                }
 
             BridgeView(
                 allowBouncing: allowBouncing,
@@ -99,9 +106,13 @@ public struct CollectionHStack<Element: Hashable>: View {
                 scrollBehavior: scrollBehavior,
                 sizeObserver: sizeObserver,
                 viewProvider: viewProvider,
-                sizeBinding: $contentSize
+                sizeBinding: $sizeObserver.contentSize
             )
-            .frame(height: contentSize.height)
+            .frame(height: newHeight)
+//            .frame(height: contentSize.height)
+        }
+        .onChange(of: sizeObserver.contentSize) { newValue in
+            newHeight = newValue.height
         }
     }
 }

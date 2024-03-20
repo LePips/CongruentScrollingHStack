@@ -14,9 +14,11 @@ extension MusicGenreView {
 
                 Text(album.album)
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
 
                 Text(album.artist)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
         }
     }

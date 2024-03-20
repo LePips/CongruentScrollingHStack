@@ -61,8 +61,11 @@ class UICollectionHStack<Element: Hashable>: UIView,
     private var size: CGSize {
         didSet {
             itemSize = itemSize(for: layout)
-            sizeBinding.wrappedValue = size
-            invalidateIntrinsicContentSize()
+            
+            DispatchQueue.main.async {
+                self.sizeBinding.wrappedValue.height = self.size.height
+            }
+            
             collectionView.collectionViewLayout.prepare()
             collectionView.collectionViewLayout.invalidateLayout()
         }
@@ -95,7 +98,7 @@ class UICollectionHStack<Element: Hashable>: UIView,
         self.data = data
         self.didScrollToItems = didScrollToItems
         self.effectiveItemCount = 0
-        self.effectiveWidth = 0
+        self.effectiveWidth = sizeBinding.wrappedValue.width
         self.insets = insets
         self.isCarousel = isCarousel
         self.itemSpacing = itemSpacing
@@ -120,11 +123,6 @@ class UICollectionHStack<Element: Hashable>: UIView,
 
         proxy.collectionView = self
 
-        sizeObserver.onSizeChanged = { newSize in
-            self.effectiveWidth = newSize.width
-            self.layoutSubviews()
-        }
-
         collectionView.clipsToBounds = clipsToBounds
 
         update(with: data, allowScrolling: nil)
@@ -135,9 +133,9 @@ class UICollectionHStack<Element: Hashable>: UIView,
         fatalError("init(coder:) has not been implemented")
     }
 
-    override var intrinsicContentSize: CGSize {
-        size
-    }
+//    override var intrinsicContentSize: CGSize {
+//        size
+//    }
 
     // MARK: collectionView
 
@@ -307,8 +305,18 @@ class UICollectionHStack<Element: Hashable>: UIView,
         with newData: Binding<OrderedSet<Element>>,
         allowBouncing: Bool? = nil,
         allowScrolling: Bool? = nil,
-        dataPrefix: Int? = nil
+        dataPrefix: Int? = nil,
+        newSize: CGSize? = nil
     ) {
+        
+        if let newSize, newSize.width != effectiveWidth {
+//            DispatchQueue.main.async {
+//                self.effectiveWidth = newSize.width
+//                self.layoutSubviews()
+//            }
+            effectiveWidth = newSize.width
+            layoutSubviews()
+        }
 
         // data
 

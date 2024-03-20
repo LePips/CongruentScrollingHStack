@@ -1,6 +1,9 @@
 import SwiftUI
 
 class SizeObserver: ObservableObject {
+    
+    @Published
+    var contentSize: CGSize = .zero
 
     var onSizeChanged: (CGSize) -> Void
 
