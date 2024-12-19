@@ -59,6 +59,7 @@ class UICollectionHStack<Element, Data: Collection, ID: Hashable>:
     private let onReachedTrailingEdgeOffset: CollectionHStackEdgeOffset
 
     // internal
+    private var dataPrefix: Int
     private var effectiveItemCount: Int
     private var effectiveWidth: CGFloat
     private let isCarousel: Bool
@@ -91,6 +92,7 @@ class UICollectionHStack<Element, Data: Collection, ID: Hashable>:
         id: KeyPath<Element, ID>,
         clipsToBounds: Bool,
         data: Data,
+        dataPrefix: Int,
         didScrollToItems: @escaping ([Element]) -> Void,
         insets: EdgeInsets,
         isCarousel: Bool,
@@ -108,6 +110,7 @@ class UICollectionHStack<Element, Data: Collection, ID: Hashable>:
     ) {
         self._id = id
         self.data = data
+        self.dataPrefix = dataPrefix
         self.didScrollToItems = didScrollToItems
         self.effectiveItemCount = 0
         self.effectiveWidth = 0
@@ -141,7 +144,7 @@ class UICollectionHStack<Element, Data: Collection, ID: Hashable>:
 
         collectionView.clipsToBounds = clipsToBounds
 
-        update(with: data, allowScrolling: nil)
+        update(newData: data)
     }
 
     @available(*, unavailable)
@@ -206,7 +209,7 @@ class UICollectionHStack<Element, Data: Collection, ID: Hashable>:
             size = newSize
         }
 
-        update(with: data)
+        update(newData: data)
     }
 
     // MARK: proxy
@@ -355,51 +358,34 @@ class UICollectionHStack<Element, Data: Collection, ID: Hashable>:
     // MARK: update
 
     func update(
-        with newData: Data,
+        newData: Data,
         allowBouncing: Bool? = nil,
         allowScrolling: Bool? = nil,
         dataPrefix: Int? = nil
     ) {
+        
+        if let dataPrefix {
+            self.dataPrefix = dataPrefix
+        }
 
         // data
 
-        if let dataPrefix, dataPrefix > 0 {
+        let newIDs = newData
+            .prefixPositive(self.dataPrefix)
+            .map { $0[keyPath: _id] }
+            .map(\.hashValue)
 
-            let newIDs = newData
-                .prefix(dataPrefix)
-                .map { $0[keyPath: _id] }
-                .map(\.hashValue)
+        let changes = StagedChangeset(
+            source: currentElementIDHashes,
+            target: newIDs,
+            section: 0
+        )
 
-            let changes = StagedChangeset(
-                source: currentElementIDHashes,
-                target: newIDs,
-                section: 0
-            )
+        data = newData
 
-            data = newData
-
-            collectionView.reload(using: changes) { data in
-                self.effectiveItemCount = data.count
-                self.currentElementIDHashes = newIDs
-            }
-        } else {
-
-            let newIDs = newData
-                .map { $0[keyPath: _id] }
-                .map(\.hashValue)
-
-            let changes = StagedChangeset(
-                source: currentElementIDHashes,
-                target: newIDs,
-                section: 0
-            )
-
-            data = newData
-
-            collectionView.reload(using: changes) { data in
-                self.effectiveItemCount = data.count
-                self.currentElementIDHashes = newIDs
-            }
+        collectionView.reload(using: changes) { data in
+            self.effectiveItemCount = data.count
+            self.currentElementIDHashes = newIDs
         }
 
         // allowBouncing

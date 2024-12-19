@@ -30,7 +30,7 @@ func % (lhs: CGFloat, rhs: CGFloat) -> CGFloat {
 
 // MARK: Array
 
-public extension Array {
+extension Array {
 
     @inlinable
     func max(using keyPath: KeyPath<Element, some Comparable>) -> Element? {
@@ -63,6 +63,16 @@ extension CGSize {
 }
 
 // MARK: Collection
+
+extension Collection {
+    
+    func prefixPositive(_ maxLength: Int) -> Self.SubSequence {
+        guard maxLength > 0 else { return self[..<endIndex] }
+        return prefix(maxLength)
+    }
+}
+
+// MARK: - Sequence
 
 extension Sequence {
 

@@ -9,7 +9,7 @@ struct BridgeView<Element, Data: Collection, ID: Hashable>: UIViewRepresentable 
     let allowScrolling: Bool
     let clipsToBounds: Bool
     let data: Data
-    let dataPrefix: Int?
+    let dataPrefix: Int
     let didScrollToItems: ([Element]) -> Void
     let insets: EdgeInsets
     let isCarousel: Bool
@@ -30,6 +30,7 @@ struct BridgeView<Element, Data: Collection, ID: Hashable>: UIViewRepresentable 
             id: id,
             clipsToBounds: clipsToBounds,
             data: data,
+            dataPrefix: dataPrefix,
             didScrollToItems: didScrollToItems,
             insets: insets,
             isCarousel: isCarousel,
@@ -49,7 +50,7 @@ struct BridgeView<Element, Data: Collection, ID: Hashable>: UIViewRepresentable 
 
     func updateUIView(_ view: UIViewType, context: Context) {
         view.update(
-            with: data,
+            newData: data,
             allowBouncing: allowBouncing,
             allowScrolling: allowScrolling,
             dataPrefix: dataPrefix

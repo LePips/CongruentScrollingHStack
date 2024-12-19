@@ -88,7 +88,7 @@ public struct CollectionHStack<Element, Data: Collection, ID: Hashable>: View wh
                 allowScrolling: allowScrolling,
                 clipsToBounds: clipsToBounds,
                 data: data,
-                dataPrefix: dataPrefix,
+                dataPrefix: dataPrefix ?? 0,
                 didScrollToItems: didScrollToItems,
                 insets: insets,
                 isCarousel: isCarousel,
